@@ -1,0 +1,22 @@
+# Prompt Options
+PROMPT: 
+  NUM_TOKENS: 5
+  LOCATION: "prepend"
+  INITIATION: "random"
+  DEEP: False
+  DROPOUT: 0.0
+
+DATA_PATH: "/home/sciapponi"
+DEVICE: "cuda"
+
+# Training/Inference parameters
+BATCH_SIZE: 16
+NUM_WORKERS: 10
+LR: 5e-4
+EVAL_EVERY: 1
+EPOCHS: 100
+
+# Wandb Config
+USE_WANDB: True
+PROJECT_NAME: "Standard Prompting on Audio Spectrogram Transformer"
+EXP_NAME: "AST_PROMPT_01"
