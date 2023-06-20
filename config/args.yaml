@@ -6,7 +6,7 @@ PROMPT:
   DEEP: False
   DROPOUT: 0.0
 
-DATA_PATH: "/home/sciapponi"
+DATA_PATH: '/home/ste/Datasets/'
 DEVICE: "cuda"
 
 # Training/Inference parameters
@@ -14,7 +14,7 @@ BATCH_SIZE: 16
 NUM_WORKERS: 10
 LR: 5e-4
 EVAL_EVERY: 1
-EPOCHS: 100
+EPOCHS: 10
 
 # Wandb Config
 USE_WANDB: True
