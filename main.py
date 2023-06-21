@@ -1,5 +1,6 @@
 import hydra
 import torch
+from torch.optim import AdamW
 from models.prompt_ast import PromptAST
 from fluentspeech import FluentSpeech
 from transformers import AutoFeatureExtractor
@@ -22,11 +23,12 @@ def data_processing(data, processor):
 
     return torch.cat(x), torch.tensor(y)
 
-def train_one_epoch(model, training_loader, loss_fn, epoch_index, optimizer, tb_writer):
+# EPOCH TRAINING
+def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer):
     running_loss = 0.
     last_loss = 0.
 
-    for i, data in enumerate(training_loader):
+    for i, data in enumerate(train_loader):
         # Every data instance is an input + label pair
         inputs, labels = data
 
@@ -35,11 +37,16 @@ def train_one_epoch(model, training_loader, loss_fn, epoch_index, optimizer, tb_
 
         # Make predictions for this batch
         outputs = model(inputs)
+        # Argmax on predictions
+        _, predictions = torch.max(outputs, 1)
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs, labels)
         loss.backward()
 
+        # Accuracy Computation
+        total += labels.size(0)
+        accuracy += (predictions == labels).sum().item()
         # Adjust learning weights
         optimizer.step()
 
@@ -48,17 +55,26 @@ def train_one_epoch(model, training_loader, loss_fn, epoch_index, optimizer, tb_
         if i % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(i + 1, last_loss))
-            tb_x = epoch_index * len(training_loader) + i + 1
-            tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            tb_x = epoch_index * len(train_loader) + i + 1
+            #tb_writer.add_scalar('Loss/train', last_loss, tb_x)
             running_loss = 0.
+    
+    intent_accuracy_train = (100 * accuracy / total)
 
-    return last_loss
+
+    return last_loss, intent_accuracy_train
 
 def evaluate():
     pass
 
 @hydra.main(version_base=None, config_path='config', config_name='args')
 def main(args):
+
+    # WANDB
+    if args.USE_WANDB:
+        
+        wandb.init(project=args.PROJECT_NAME, name=args.EXP_NAME,entity="sciapponi",
+                   config = args)
 
     # VARIABLE DEFINITIONS
     data_path = args.DATA_PATH
@@ -67,69 +83,86 @@ def main(args):
     processor = AutoFeatureExtractor.from_pretrained(model_ckpt)
     prompt_config = args.PROMPT
     EPOCHS = args.EPOCHS
-
+    BATCH_SIZE = args.BATCH_SIZE
     # DATASETS
     train_data = FluentSpeech(data_path,train="train", max_len_audio=64000)
     test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
     val_data = FluentSpeech(data_path,train="valid", max_len_audio=64000)
 
     # DATA LOADERS
-    train_loader = DataLoader(train_data, batch_size=4, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
-    test_loader = DataLoader(test_data, batch_size=4, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
-    val_loader = DataLoader(val_data, batch_size=4, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
+    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
+    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
 
-    # model definition
+    # MODEL DEFINITION
     model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31)
     print(model)
 
-
+    # OPTIMIZER and LOSS DEFINITION
+    optimizer = AdamW(model.parameters(),lr=args.lr,betas=(0.9,0.98),eps=1e-6,weight_decay=args.weight_decay)
+    loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
     # TRAINING LOOP
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
+    # timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    # writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
     epoch_number = 0
     
     EPOCHS = 5
     
     best_vloss = 1_000_000.
     
-    # for epoch in range(EPOCHS):
-    #     print('EPOCH {}:'.format(epoch_number + 1))
+    for epoch in range(EPOCHS):
+        print('EPOCH {}:'.format(epoch_number + 1))
     
-    #     # Make sure gradient tracking is on, and do a pass over the data
-    #     model.train(True)
-    #     avg_loss = train_one_epoch(epoch_number, writer)
+        # Make sure gradient tracking is on, and do a pass over the data
+        model.train(True)
+        avg_loss, intent_accuracy_train = train_one_epoch(model=model, 
+                                                            train_loader=train_loader,
+                                                            loss_fn=loss_fn,
+                                                            epoch_index=epoch,
+                                                            optimizer=optimizer
+                                                            )
     
     
-    #     running_vloss = 0.0
-    #     # Set the model to evaluation mode, disabling dropout and using population
-    #     # statistics for batch normalization.
-    #     model.eval()
+        running_vloss = 0.0
+        # Set the model to evaluation mode, disabling dropout and using population
+        # statistics for batch normalization.
+        model.eval()
     
-    #     # Disable gradient computation and reduce memory consumption.
-    #     with torch.no_grad():
-    #         for i, vdata in enumerate(validation_loader):
-    #             vinputs, vlabels = vdata
-    #             voutputs = model(vinputs)
-    #             vloss = loss_fn(voutputs, vlabels)
-    #             running_vloss += vloss
+        # Disable gradient computation and reduce memory consumption.
+        with torch.no_grad():
+            for i, vdata in enumerate(val_loader):
+                vinputs, vlabels = vdata
+                voutputs = model(vinputs)
+                # Argmax on predictions
+                _, vpredictions = torch.max(voutputs, 1)
+
+                vloss = loss_fn(voutputs, vlabels)
+                running_vloss += vloss
+                # Accuracy Computation
+                total += vlabels.size(0)
+                vaccuracy += (vpredictions == vlabels).sum().item()
+
+        intent_accuracy_val = (100 * vaccuracy / total)
+        avg_vloss = running_vloss / (i + 1)
+        print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
     
-    #     avg_vloss = running_vloss / (i + 1)
-    #     print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+        #Track best performance, and save the model's state
+        if avg_vloss < best_vloss:
+            best_vloss = avg_vloss
+            model_path = 'model_{}'.format(epoch_number)
+            torch.save(model.state_dict(), model_path)
     
-    #     # Log the running loss averaged per batch
-    #     # for both training and validation
-    #     writer.add_scalars('Training vs. Validation Loss',
-    #                     { 'Training' : avg_loss, 'Validation' : avg_vloss },
-    #                     epoch_number + 1)
-    #     writer.flush()
-    
-    #     # Track best performance, and save the model's state
-    #     if avg_vloss < best_vloss:
-    #         best_vloss = avg_vloss
-    #         model_path = 'model_{}_{}'.format(timestamp, epoch_number)
-    #         torch.save(model.state_dict(), model_path)
-    
-    #     epoch_number += 1
+        epoch_number += 1
+
+        # WANDB LOGS
+        if args.use_wandb:
+            wandb.log({"epoch":epoch,
+                       "train_loss": avg_loss, 
+                       "valid_loss": avg_vloss,
+                       "intent_accuracy_train": intent_accuracy_train,
+                       "intent_accuracy_val": intent_accuracy_val
+                       }
+                      )
 
 
 
