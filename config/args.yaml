@@ -10,7 +10,7 @@ DATA_PATH: '/home/ste/Datasets/'
 DEVICE: "cuda"
 
 # Training/Inference parameters
-BATCH_SIZE: 16
+BATCH_SIZE: 1
 NUM_WORKERS: 10
 LR: 5e-4
 EVAL_EVERY: 1
@@ -21,4 +21,4 @@ LABEL_SMOOTHING: 0.
 # Wandb Config
 USE_WANDB: True
 PROJECT_NAME: "Standard Prompting on Audio Spectrogram Transformer"
-EXP_NAME: "AST_PROMPT_01"
+EXP_NAME: "AST_STANDARD_PROMPT_01"

@@ -65,6 +65,10 @@ class PromptAST(nn.Module):
         # combine prompt embeddings with image-patch embeddings
         B = x.shape[0]
         # after CLS token, all before image patches
+        #print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).device)
+        # print(x.shape)
+        # print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).shape)
+        x = self.embeddings(x)  # (batch_size, 1 + n_patches, hidden_dim)
         x = torch.cat((
             x[:, :1, :],
             self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),

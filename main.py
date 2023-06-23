@@ -7,6 +7,7 @@ from transformers import AutoFeatureExtractor
 from torch.utils.data import DataLoader
 import soundfile
 import wandb
+from tqdm import tqdm
 
 # CREATES SPECTROGRAMS
 def data_processing(data, processor):
@@ -24,14 +25,16 @@ def data_processing(data, processor):
     return torch.cat(x), torch.tensor(y)
 
 # EPOCH TRAINING
-def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer):
+def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer, device):
     running_loss = 0.
     last_loss = 0.
-
-    for i, data in enumerate(train_loader):
+    total = 0.
+    accuracy = 0.
+    for i, data in tqdm(enumerate(train_loader)):
         # Every data instance is an input + label pair
         inputs, labels = data
-
+        inputs = inputs.to(device)
+        labels = labels.to(device)
         # Zero your gradients for every batch!
         optimizer.zero_grad()
 
@@ -79,11 +82,16 @@ def main(args):
     # VARIABLE DEFINITIONS
     data_path = args.DATA_PATH
     model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"
+    device = torch.device(args.DEVICE)
+    torch.cuda.set_device(0)
+    torch.set_num_threads(20)
     # AST Processor which computes spectrograms
     processor = AutoFeatureExtractor.from_pretrained(model_ckpt)
     prompt_config = args.PROMPT
     EPOCHS = args.EPOCHS
     BATCH_SIZE = args.BATCH_SIZE
+
+    print("Loading Data")
     # DATASETS
     train_data = FluentSpeech(data_path,train="train", max_len_audio=64000)
     test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
@@ -95,11 +103,11 @@ def main(args):
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
 
     # MODEL DEFINITION
-    model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31)
+    model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
 
     # OPTIMIZER and LOSS DEFINITION
-    optimizer = AdamW(model.parameters(),lr=args.lr,betas=(0.9,0.98),eps=1e-6,weight_decay=args.weight_decay)
+    optimizer = AdamW(model.parameters(),lr=args.LR,betas=(0.9,0.98),eps=1e-6,weight_decay=args.WEIGHT_DECAY)
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
     # TRAINING LOOP
     # timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -109,7 +117,7 @@ def main(args):
     EPOCHS = 5
     
     best_vloss = 1_000_000.
-    
+    print("TRAINING STARTED")
     for epoch in range(EPOCHS):
         print('EPOCH {}:'.format(epoch_number + 1))
     
@@ -119,11 +127,14 @@ def main(args):
                                                             train_loader=train_loader,
                                                             loss_fn=loss_fn,
                                                             epoch_index=epoch,
-                                                            optimizer=optimizer
+                                                            optimizer=optimizer,
+                                                            device=device
                                                             )
     
     
         running_vloss = 0.0
+        total = 0.
+        vaccuracy = 0.
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         model.eval()
@@ -132,6 +143,8 @@ def main(args):
         with torch.no_grad():
             for i, vdata in enumerate(val_loader):
                 vinputs, vlabels = vdata
+                vinputs = vinputs.to(device)
+                vlabels = vlabels.to(device)
                 voutputs = model(vinputs)
                 # Argmax on predictions
                 _, vpredictions = torch.max(voutputs, 1)
