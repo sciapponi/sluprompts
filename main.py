@@ -168,7 +168,7 @@ def main(args):
         epoch_number += 1
 
         # WANDB LOGS
-        if args.use_wandb:
+        if args.USE_WANDB:
             wandb.log({"epoch":epoch,
                        "train_loss": avg_loss, 
                        "valid_loss": avg_vloss,
