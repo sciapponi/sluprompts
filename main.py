@@ -114,8 +114,6 @@ def main(args):
     # writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
     epoch_number = 0
     
-    EPOCHS = 5
-    
     best_vloss = 1_000_000.
     print("TRAINING STARTED")
     for epoch in range(EPOCHS):
