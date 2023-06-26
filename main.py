@@ -106,6 +106,16 @@ def main(args):
     model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
 
+    # REQUIRES_GRAD_ = FALSE
+    model.encoder.requires_grad_(False)
+    model.embeddings.requires_grad_(False)
+    
+    # PRINT MODEL PARAMETERS
+    n_parameters = sum(p.numel() for p in model.parameters())
+    print('Number of params of the model:', n_parameters)
+    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print('Number of trainable params of the model:', n_parameters)
+
     # OPTIMIZER and LOSS DEFINITION
     optimizer = AdamW(model.parameters(),lr=args.LR,betas=(0.9,0.98),eps=1e-6,weight_decay=args.WEIGHT_DECAY)
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
