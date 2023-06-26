@@ -177,6 +177,8 @@ def main(args):
                        }
                       )
 
+    if args.USE_WANDB:
+        wandb.finish()
 
 
 if __name__=="__main__":
