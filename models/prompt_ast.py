@@ -56,6 +56,7 @@ class PromptAST(nn.Module):
             self.embeddings.eval()
             self.prompt_proj.train()
             self.prompt_dropout.train()
+            self.classification_head.train()
         else:
             # eval:
             for module in self.children():
