@@ -30,7 +30,7 @@ def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer, device
     last_loss = 0.
     total = 0.
     accuracy = 0.
-    for i, data in tqdm(enumerate(train_loader)):
+    for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
         # Every data instance is an input + label pair
         inputs, labels = data
         inputs = inputs.to(device)
@@ -141,7 +141,7 @@ def main(args):
     
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
-            for i, vdata in enumerate(val_loader):
+            for i, vdata in tqdm(enumerate(val_loader), total=len(val_loader)):
                 vinputs, vlabels = vdata
                 vinputs = vinputs.to(device)
                 vlabels = vlabels.to(device)
