@@ -24,6 +24,59 @@ def data_processing(data, processor):
 
     return torch.cat(x), torch.tensor(y)
 
+# EPOCH TRAINING GRADIENT ACCUMULATOR
+def train_one_epoch_acc(model, train_loader, loss_fn, epoch_index, optimizer, device, accum_iter=2):
+    running_loss = 0.
+    last_loss = 0.
+    total = 0.
+    accuracy = 0.
+
+    for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
+        # Every data instance is an input + label pair
+        inputs, labels = data
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        # Zero your gradients for every batch!
+        optimizer.zero_grad()
+
+        # Make predictions for this batch
+        outputs = model(inputs)
+        # Argmax on predictions
+        _, predictions = torch.max(outputs, 1)
+
+        # Compute the loss and its gradients
+        loss = loss_fn(outputs, labels)
+        # normalize loss to account for batch accumulation
+        loss = loss / accum_iter 
+
+        loss.backward()
+
+        # Accuracy Computation
+        total += labels.size(0)
+        accuracy += (predictions == labels).sum().item()
+
+        # weights update
+        if ((i + 1) % accum_iter == 0) or (i + 1 == len(train_loader)):
+            print(f"backward {i}")
+            optimizer.step()
+            optimizer.zero_grad()
+        # Adjust learning weights
+        optimizer.step()
+
+        # Gather data and report
+        running_loss += loss.item()
+        if i % 200 == 199:
+            last_loss = running_loss / 200 # loss per batch
+            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            tb_x = epoch_index * len(train_loader) + i + 1
+            #tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            running_loss = 0.
+    
+    intent_accuracy_train = (100 * accuracy / total)
+
+
+    return last_loss, intent_accuracy_train
+
 # EPOCH TRAINING
 def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer, device):
     running_loss = 0.
@@ -135,7 +188,17 @@ def main(args):
     
         # Make sure gradient tracking is on, and do a pass over the data
         model.train(True)
-        avg_loss, intent_accuracy_train = train_one_epoch(model=model, 
+        if args.GRADIENT_ACC:
+            avg_loss, intent_accuracy_train = train_one_epoch_acc(model=model, 
+                                                            train_loader=train_loader,
+                                                            loss_fn=loss_fn,
+                                                            epoch_index=epoch,
+                                                            optimizer=optimizer,
+                                                            device=device,
+                                                            accum_iter=16//BATCH_SIZE
+                                                            )
+        else:
+            avg_loss, intent_accuracy_train = train_one_epoch(model=model, 
                                                             train_loader=train_loader,
                                                             loss_fn=loss_fn,
                                                             epoch_index=epoch,

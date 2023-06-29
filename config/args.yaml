@@ -18,7 +18,7 @@ EPOCHS: 10
 WEIGHT_DECAY: 0.1 
 LABEL_SMOOTHING: 0.
 MAX_LENGTH: 1024
-
+GRADIENT_ACC: False
 # Wandb Config
 USE_WANDB: True
 PROJECT_NAME: "Standard Prompting on Audio Spectrogram Transformer"
