@@ -37,7 +37,7 @@ def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer, device
         labels = labels.to(device)
         # Zero your gradients for every batch!
         optimizer.zero_grad()
-
+        print(inputs.shape)
         # Make predictions for this batch
         outputs = model(inputs)
         # Argmax on predictions
@@ -86,7 +86,8 @@ def main(args):
     torch.cuda.set_device(0)
     torch.set_num_threads(20)
     # AST Processor which computes spectrograms
-    processor = AutoFeatureExtractor.from_pretrained(model_ckpt)
+    MAX_LENGTH= args.MAX_LENGTH
+    processor = AutoFeatureExtractor.from_pretrained(model_ckpt, max_length=MAX_LENGTH)
     prompt_config = args.PROMPT
     EPOCHS = args.EPOCHS
     BATCH_SIZE = args.BATCH_SIZE
@@ -104,9 +105,9 @@ def main(args):
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
 
     # MODEL DEFINITION, 
-    model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31).to(device)
+    model = PromptAST(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
-
+    
     # REQUIRES_GRAD_ = FALSE
     model.encoder.requires_grad_(False)
     model.embeddings.requires_grad_(False)
@@ -114,6 +115,8 @@ def main(args):
     # PRINT MODEL PARAMETERS
     n_parameters = sum(p.numel() for p in model.parameters())
     print('Number of params of the model:', n_parameters)
+    n_parameters = sum(p.numel() for p in model.encoder.parameters())
+    print('Number of params of the encoder:', n_parameters)
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('Number of trainable params of the model:', n_parameters)
 

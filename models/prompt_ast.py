@@ -9,14 +9,14 @@ from torch.nn.modules.utils import _pair
 
 class PromptAST(nn.Module):
 
-    def __init__(self, prompt_config, num_classes, model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"):
+    def __init__(self, prompt_config, max_length, num_classes, model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"):
 
         super().__init__()
         # PROMPT CONFIG
         self.prompt_config = prompt_config
 
         # LOADING PRETRAINED MODEL
-        base_model = ASTModel.from_pretrained(model_ckpt)
+        base_model = ASTModel.from_pretrained(model_ckpt, max_length=max_length, ignore_mismatched_sizes=True)
         self.model_config = base_model.config
 
         # Getting Patch Embedder and Transformer Encder From Pretrained Model
@@ -70,6 +70,7 @@ class PromptAST(nn.Module):
         # print(x.shape)
         # print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).shape)
         x = self.embeddings(x)  # (batch_size, 1 + n_patches, hidden_dim)
+        print(x.shape)
         x = torch.cat((
             x[:, :1, :],
             self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),
