@@ -37,7 +37,7 @@ def train_one_epoch(model, train_loader, loss_fn, epoch_index, optimizer, device
         labels = labels.to(device)
         # Zero your gradients for every batch!
         optimizer.zero_grad()
-        print(inputs.shape)
+
         # Make predictions for this batch
         outputs = model(inputs)
         # Argmax on predictions
@@ -107,7 +107,7 @@ def main(args):
     # MODEL DEFINITION, 
     model = PromptAST(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
-    
+
     # REQUIRES_GRAD_ = FALSE
     model.encoder.requires_grad_(False)
     model.embeddings.requires_grad_(False)

@@ -70,7 +70,7 @@ class PromptAST(nn.Module):
         # print(x.shape)
         # print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).shape)
         x = self.embeddings(x)  # (batch_size, 1 + n_patches, hidden_dim)
-        print(x.shape)
+
         x = torch.cat((
             x[:, :1, :],
             self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),
