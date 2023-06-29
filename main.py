@@ -90,19 +90,20 @@ def main(args):
     prompt_config = args.PROMPT
     EPOCHS = args.EPOCHS
     BATCH_SIZE = args.BATCH_SIZE
+    NUM_WORKERS = args.NUM_WORKERS
 
     print("Loading Data")
     # DATASETS
     train_data = FluentSpeech(data_path,train="train", max_len_audio=64000)
-    test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
+    #test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
     val_data = FluentSpeech(data_path,train="valid", max_len_audio=64000)
 
     # DATA LOADERS
-    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
-    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
-    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor))
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
+    #test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
+    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
 
-    # MODEL DEFINITION
+    # MODEL DEFINITION, 
     model = PromptAST(prompt_config=prompt_config, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
 

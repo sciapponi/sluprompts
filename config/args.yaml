@@ -11,7 +11,7 @@ DEVICE: "cuda"
 
 # Training/Inference parameters
 BATCH_SIZE: 1
-NUM_WORKERS: 10
+NUM_WORKERS: 4
 LR: 5e-4
 EVAL_EVERY: 1
 EPOCHS: 10
