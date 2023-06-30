@@ -57,7 +57,7 @@ def train_one_epoch_acc(model, train_loader, loss_fn, epoch_index, optimizer, de
 
         # weights update
         if ((i + 1) % accum_iter == 0) or (i + 1 == len(train_loader)):
-            print(f"backward {i}")
+            # print(f"backward {i}")
             optimizer.step()
             optimizer.zero_grad()
         # Adjust learning weights
