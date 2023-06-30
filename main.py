@@ -36,8 +36,6 @@ def train_one_epoch_acc(model, train_loader, loss_fn, epoch_index, optimizer, de
         inputs, labels = data
         inputs = inputs.to(device)
         labels = labels.to(device)
-        # Zero your gradients for every batch!
-        optimizer.zero_grad()
 
         # Make predictions for this batch
         outputs = model(inputs)
@@ -60,8 +58,7 @@ def train_one_epoch_acc(model, train_loader, loss_fn, epoch_index, optimizer, de
             # print(f"backward {i}")
             optimizer.step()
             optimizer.zero_grad()
-        # Adjust learning weights
-        optimizer.step()
+
 
         # Gather data and report
         running_loss += loss.item()
