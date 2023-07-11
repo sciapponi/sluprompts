@@ -18,10 +18,11 @@ class PromptAST(nn.Module):
         # LOADING PRETRAINED MODEL
         base_model = ASTModel.from_pretrained(model_ckpt, max_length=max_length, ignore_mismatched_sizes=True)
         self.model_config = base_model.config
-
+        print("BASE_MODEL:\n", base_model)
         # Getting Patch Embedder and Transformer Encder From Pretrained Model
         self.embeddings = base_model._modules['embeddings']
         self.encoder = base_model._modules['encoder']
+
         self.patch_size = _pair(self.model_config.patch_size)
         # Prompt Config
         self.num_tokens = self.prompt_config.NUM_TOKENS
@@ -43,8 +44,14 @@ class PromptAST(nn.Module):
 
             # xavier_uniform initialization
             nn.init.uniform_(self.prompt_embeddings.data, -val, +val)
+
+            # DEEP PROMPT INITIALIZATION
             if self.prompt_config.DEEP:
-                raise NotImplementedError("DEEP Prompting not implemented for now.")
+                total_d_layer = self.model_config.num_hidden_layers-1
+                self.deep_prompt_embeddings = nn.Parameter(torch.zeros(
+                    total_d_layer, self.num_tokens, prompt_dim))
+                # xavier_uniform initialization
+                nn.init.uniform_(self.deep_prompt_embeddings.data, -val, val)
         else:
             raise ValueError("Other initiation scheme is not supported")
     
@@ -70,7 +77,7 @@ class PromptAST(nn.Module):
         # print(x.shape)
         # print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).shape)
         x = self.embeddings(x)  # (batch_size, 1 + n_patches, hidden_dim)
-
+        # print(self.prompt_embeddings)
         x = torch.cat((
             x[:, :1, :],
             self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),
@@ -79,12 +86,53 @@ class PromptAST(nn.Module):
 
         return x
     
+    # DEEP PROMPT FORWARDING
+    def forward_deep_prompt(self, embedding_output):
+        attn_weights = []
+        hidden_states = None
+        weights = None
+        B = embedding_output.shape[0]
+        num_layers = self.model_config.num_hidden_layers
+
+        for i in range(num_layers):
+            print(i)
+            if i == 0:
+                
+                hidden_states = self.encoder.layer[i](embedding_output)[0]
+                print(hidden_states[0])
+                print(type(hidden_states[0]))
+            else:
+                if i <= self.deep_prompt_embeddings.shape[0]:
+                    
+                    deep_prompt_emb = self.prompt_dropout(self.prompt_proj(
+                        self.deep_prompt_embeddings[i-1]).expand(B, -1, -1))
+                    
+                    hidden_states = torch.cat((
+                        hidden_states[:, :1, :],
+                        deep_prompt_emb,
+                        hidden_states[:, (1+self.num_tokens):, :]
+                    ), dim=1)
+
+
+                hidden_states = self.encoder.layer[i](hidden_states)[0]
+
+            # if self.encoder.vis:
+            #     attn_weights.append(weights)
+
+        # encoded = self.encoder[layernorm_after](hidden_states)
+        # print(hidden_states.shape)
+        return hidden_states
+    
     def forward(self, x):
         embedding_output = self.incorporate_prompt(x)
 
         if self.prompt_config.DEEP:
-            raise NotImplementedError("DEEP Prompting not implemented for now.")
+            x = self.forward_deep_prompt(
+                embedding_output)
+            out = self.classification_head(torch.mean(x, 1))
         else:
             x = self.encoder(embedding_output)
-        out = self.classification_head(torch.mean(x.last_hidden_state, 1))
+            out = self.classification_head(torch.mean(x.last_hidden_state, 1))
+        
+        
         return out
