@@ -7,6 +7,7 @@ from functools import reduce
 from torch.nn import Dropout
 from torch.nn.modules.utils import _pair
 
+
 class PromptAST(nn.Module):
 
     def __init__(self, prompt_config, max_length, num_classes, model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"):
@@ -95,12 +96,12 @@ class PromptAST(nn.Module):
         num_layers = self.model_config.num_hidden_layers
 
         for i in range(num_layers):
-            print(i)
+            # print(i)
             if i == 0:
                 
                 hidden_states = self.encoder.layer[i](embedding_output)[0]
-                print(hidden_states[0])
-                print(type(hidden_states[0]))
+                # print(hidden_states[0])
+                # print(type(hidden_states[0]))
             else:
                 if i <= self.deep_prompt_embeddings.shape[0]:
                     
