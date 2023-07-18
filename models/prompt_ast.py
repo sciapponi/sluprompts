@@ -104,7 +104,6 @@ class PromptAST(nn.Module):
                 # print(type(hidden_states[0]))
             else:
                 if i <= self.deep_prompt_embeddings.shape[0]:
-                    print(hidden_states.shape)
                     deep_prompt_emb = self.prompt_dropout(self.prompt_proj(
                         self.deep_prompt_embeddings[i-1]).expand(B, -1, -1))
                     
@@ -125,7 +124,6 @@ class PromptAST(nn.Module):
         return hidden_states
     
     def forward(self, x):
-        print(x.shape)
         embedding_output = self.incorporate_prompt(x)
        
         if self.prompt_config.DEEP:
@@ -134,7 +132,6 @@ class PromptAST(nn.Module):
             out = self.classification_head(torch.mean(x, 1))
         else:
             x = self.encoder(embedding_output)
-            print(x.last_hidden_state.shape)
             out = self.classification_head(torch.mean(x.last_hidden_state, 1))
         
         
