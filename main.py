@@ -174,7 +174,7 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
 
     # LR SCHEDULER
-    T_0 = 1
+    T_0 = 10
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
 
     # TRAINING LOOP
@@ -215,7 +215,8 @@ def main(args):
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         model.eval()
-    
+
+        print("VALIDATION:")
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
             for i, vdata in tqdm(enumerate(val_loader), total=len(val_loader)):
