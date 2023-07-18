@@ -30,7 +30,6 @@ def train_one_epoch_acc(model, train_loader, loss_fn, epoch_index, optimizer, de
     last_loss = 0.
     total = 0.
     accuracy = 0.
-
     for i, data in tqdm(enumerate(train_loader), total=len(train_loader)):
         # Every data instance is an input + label pair
         inputs, labels = data
@@ -173,9 +172,12 @@ def main(args):
     # OPTIMIZER and LOSS DEFINITION
     optimizer = AdamW(model.parameters(),lr=args.LR,betas=(0.9,0.98),eps=1e-6,weight_decay=args.WEIGHT_DECAY)
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
+
+    # LR SCHEDULER
+    T_0 = 1
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
+
     # TRAINING LOOP
-    # timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
     epoch_number = 0
     
     best_vloss = 1_000_000.
@@ -202,7 +204,10 @@ def main(args):
                                                             optimizer=optimizer,
                                                             device=device
                                                             )
-    
+        
+        # Learning rate scheduler step
+        scheduler.step(epoch)
+        print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
     
         running_vloss = 0.0
         total = 0.
