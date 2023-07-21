@@ -174,7 +174,7 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
 
     # LR SCHEDULER
-    T_0 = 10
+    T_0 = EPOCHS
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
 
     # TRAINING LOOP
