@@ -265,7 +265,7 @@ def main(args):
         #Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = f'saved_models/{args.EXP_NAME}/model_{epoch_number}'
+            model_path = f'saved_models/{args.EXP_NAME}_model_{epoch_number}'
             torch.save(model.state_dict(), model_path)
     
         epoch_number += 1
