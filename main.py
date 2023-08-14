@@ -211,7 +211,7 @@ def main(args):
             scheduler.step(epoch)
             print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
     
-        running_vloss = 0.0
+        running_tloss = 0.0
         total = 0.
         taccuracy=0.
         # Set the model to evaluation mode, disabling dropout and using population
