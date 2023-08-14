@@ -227,7 +227,7 @@ def main(args):
                 tlabels = tlabels.to(device)
                 toutputs = model(tinputs)
                 # Argmax on predictions
-                _, tpredictions = torch.max(voutputs, 1)
+                _, tpredictions = torch.max(toutputs, 1)
 
                 tloss = loss_fn(toutputs, tlabels)
                 running_tloss += tloss
