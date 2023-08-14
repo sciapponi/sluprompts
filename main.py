@@ -213,7 +213,7 @@ def main(args):
     
         running_vloss = 0.0
         total = 0.
-        vaccuracy = 0.
+        taccuracy=0.
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         model.eval()
@@ -238,6 +238,9 @@ def main(args):
         intent_accuracy_test = (100 * taccuracy / total)
         avg_tloss = running_vloss / (i + 1)
 
+        running_vloss = 0.0
+        total = 0.
+        vaccuracy = 0.
         print("VALIDATION:")
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
