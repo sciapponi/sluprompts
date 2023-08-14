@@ -19,7 +19,9 @@ WEIGHT_DECAY: 0.1
 LABEL_SMOOTHING: 0.
 MAX_LENGTH: 1024
 GRADIENT_ACC: False
+USE_SCHEDULER: False
+
 # Wandb Config
 USE_WANDB: True
-PROJECT_NAME: "Standard Prompting on Audio Spectrogram Transformer"
+PROJECT_NAME: "AST Prompt Tuning New"
 EXP_NAME: "AST_STANDARD_PROMPT_01"

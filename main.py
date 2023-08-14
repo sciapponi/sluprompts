@@ -145,12 +145,12 @@ def main(args):
     print("Loading Data")
     # DATASETS
     train_data = FluentSpeech(data_path,train="train", max_len_audio=64000)
-    #test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
+    test_data = FluentSpeech(data_path,train="test", max_len_audio=64000)
     val_data = FluentSpeech(data_path,train="valid", max_len_audio=64000)
 
     # DATA LOADERS
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
-    #test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
+    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
 
     # MODEL DEFINITION, 
@@ -174,8 +174,9 @@ def main(args):
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
 
     # LR SCHEDULER
-    T_0 = EPOCHS
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
+    if args.USE_SCHEDULER:
+        T_0 = EPOCHS
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
 
     # TRAINING LOOP
     epoch_number = 0
@@ -206,8 +207,9 @@ def main(args):
                                                             )
         
         # Learning rate scheduler step
-        scheduler.step(epoch)
-        print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
+        if args.USE_SCHEDULER:
+            scheduler.step(epoch)
+            print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
     
         running_vloss = 0.0
         total = 0.
@@ -215,6 +217,26 @@ def main(args):
         # Set the model to evaluation mode, disabling dropout and using population
         # statistics for batch normalization.
         model.eval()
+
+        print("TEST:")
+        # Disable gradient computation and reduce memory consumption.
+        with torch.no_grad():
+            for i, tdata in tqdm(enumerate(test_loader), total=len(test_loader)):
+                tinputs, tlabels = tdata
+                tinputs = tinputs.to(device)
+                tlabels = tlabels.to(device)
+                toutputs = model(tinputs)
+                # Argmax on predictions
+                _, tpredictions = torch.max(voutputs, 1)
+
+                tloss = loss_fn(toutputs, tlabels)
+                running_tloss += tloss
+                # Accuracy Computation
+                total += tlabels.size(0)
+                taccuracy += (tpredictions == tlabels).sum().item()
+
+        intent_accuracy_test = (100 * taccuracy / total)
+        avg_tloss = running_vloss / (i + 1)
 
         print("VALIDATION:")
         # Disable gradient computation and reduce memory consumption.
@@ -235,22 +257,23 @@ def main(args):
 
         intent_accuracy_val = (100 * vaccuracy / total)
         avg_vloss = running_vloss / (i + 1)
-        print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+        print('LOSS train {} traing {} valid {}'.format(avg_loss, avg_tloss, avg_vloss))
     
         #Track best performance, and save the model's state
         if avg_vloss < best_vloss:
             best_vloss = avg_vloss
-            model_path = 'model_{}'.format(epoch_number)
+            model_path = f'saved_models/{args.EXP_NAME}/model_{epoch_number}'
             torch.save(model.state_dict(), model_path)
     
         epoch_number += 1
 
         # WANDB LOGS
         if args.USE_WANDB:
-            wandb.log({"epoch":epoch,
-                       "train_loss": avg_loss, 
+            wandb.log({"train_loss": avg_loss, 
+                       "test_loss": avg_tloss, 
                        "valid_loss": avg_vloss,
                        "intent_accuracy_train": intent_accuracy_train,
+                       "intent_accuracy_test": intent_accuracy_test,
                        "intent_accuracy_val": intent_accuracy_val
                        }
                       )
