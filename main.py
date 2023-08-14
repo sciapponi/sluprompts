@@ -236,7 +236,7 @@ def main(args):
                 taccuracy += (tpredictions == tlabels).sum().item()
 
         intent_accuracy_test = (100 * taccuracy / total)
-        avg_tloss = running_vloss / (i + 1)
+        avg_tloss = running_tloss / (i + 1)
 
         running_vloss = 0.0
         total = 0.
