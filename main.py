@@ -128,7 +128,7 @@ def main(args):
         wandb.init(project=args.PROJECT_NAME, name=args.EXP_NAME,entity="sciapponi",
                    config = args)
 
-    # VARIABLE DEFINITIONS
+    # VARIABLE DEFINITION
     data_path = args.DATA_PATH
     model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"
     device = torch.device(args.DEVICE)
@@ -153,7 +153,7 @@ def main(args):
     test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
 
-    # MODEL DEFINITION, 
+    # MODEL DEFINITION
     model = PromptAST(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
     print(model)
 
@@ -172,7 +172,7 @@ def main(args):
     # OPTIMIZER and LOSS DEFINITION
     optimizer = AdamW(model.parameters(),lr=args.LR,betas=(0.9,0.98),eps=1e-6,weight_decay=args.WEIGHT_DECAY)
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
-
+    last_lr = args.lr
     # LR SCHEDULER
     if args.USE_SCHEDULER:
         T_0 = EPOCHS
@@ -209,6 +209,7 @@ def main(args):
         # Learning rate scheduler step
         if args.USE_SCHEDULER:
             scheduler.step(epoch)
+            last_lr = scheduler.get_last_lr()
             print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
     
         running_tloss = 0.0
@@ -277,7 +278,8 @@ def main(args):
                        "valid_loss": avg_vloss,
                        "intent_accuracy_train": intent_accuracy_train,
                        "intent_accuracy_test": intent_accuracy_test,
-                       "intent_accuracy_val": intent_accuracy_val
+                       "intent_accuracy_val": intent_accuracy_val,
+                       "lr": last_lr
                        }
                       )
 
