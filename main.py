@@ -172,7 +172,7 @@ def main(args):
     # OPTIMIZER and LOSS DEFINITION
     optimizer = AdamW(model.parameters(),lr=args.LR,betas=(0.9,0.98),eps=1e-6,weight_decay=args.WEIGHT_DECAY)
     loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=args.LABEL_SMOOTHING)
-    last_lr = args.lr
+    last_lr = args.LR
     # LR SCHEDULER
     if args.USE_SCHEDULER:
         T_0 = EPOCHS
@@ -210,7 +210,7 @@ def main(args):
         if args.USE_SCHEDULER:
             scheduler.step(epoch)
             last_lr = scheduler.get_last_lr()
-            print(f"Learning rate at epoch {epoch}: {scheduler.get_last_lr()}")
+            print(f"Learning rate at epoch {epoch}: {last_lr}")
     
         running_tloss = 0.0
         total = 0.
