@@ -176,7 +176,8 @@ def main(args):
     # LR SCHEDULER
     if args.USE_SCHEDULER:
         T_0 = EPOCHS
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, len(train_loader)*EPOCHS)
 
     # TRAINING LOOP
     epoch_number = 0
