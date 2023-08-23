@@ -125,8 +125,7 @@ def main(args):
     # WANDB
     if args.USE_WANDB:
         
-        wandb.init(project=args.PROJECT_NAME, name=args.EXP_NAME,entity="sciapponi",
-                   config = args)
+        wandb.init(project=args.PROJECT_NAME, name=args.EXP_NAME,entity="sciapponi", config = args)
 
     # VARIABLE DEFINITION
     data_path = args.DATA_PATH
