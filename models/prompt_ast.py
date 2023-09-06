@@ -123,16 +123,36 @@ class PromptAST(nn.Module):
         # print(hidden_states.shape)
         return hidden_states
     
+    def forward_last_layer_only(self, x):
+        B = x.shape[0]
+        x = self.embeddings(x) # compute embeddings
+        num_layers = self.model_config.num_hidden_layers
+
+        for i in range(num_layers):
+            # add prompt before passing through last layer
+            if i == num_layers-1:
+                x = torch.cat((
+                            x[:, :1, :],
+                            self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),
+                            x[:, 1:, :]
+                        ), dim=1)
+            x = self.encoder.layer[i](x)[0]
+        
+        return x
+
     def forward(self, x):
-        embedding_output = self.incorporate_prompt(x)
-       
-        if self.prompt_config.DEEP:
-            x = self.forward_deep_prompt(
-                embedding_output)
-            out = self.classification_head(torch.mean(x, 1))
-        else:
-            x = self.encoder(embedding_output)
-            out = self.classification_head(torch.mean(x.last_hidden_state, 1))
+        if self.prompt_config.LAST_LAYER_ONLY:
+            x = self.forward_last_layer_only(x)
+            
+        else:        
+            
+            embedding_output = self.incorporate_prompt(x)
+
+            if self.prompt_config.DEEP:
+                x = self.forward_deep_prompt(embedding_output)
+            else:
+                x = self.encoder(embedding_output).last_hidden_state
         
-        
+        out = self.classification_head(torch.mean(x, 1))
+
         return out

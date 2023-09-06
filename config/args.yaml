@@ -4,6 +4,7 @@ PROMPT:
   LOCATION: "prepend"
   INITIATION: "random"
   DEEP: False
+  LAST_LAYER_ONLY: False
   DROPOUT: 0.0
 
 DATA_PATH: '/home/ste/Datasets/'
