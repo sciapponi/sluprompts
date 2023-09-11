@@ -101,7 +101,7 @@ class PromptW2V(nn.Module):
             # print(i)
             if i == 0:
                 
-                hidden_states = self.encoder.layer[i](embedding_output)[0]
+                hidden_states = self.encoder.layers[i](embedding_output)[0]
             else:
                 if i <= self.deep_prompt_embeddings.shape[0]:
                     deep_prompt_emb = self.prompt_dropout(self.prompt_proj(
@@ -114,7 +114,7 @@ class PromptW2V(nn.Module):
                     ), dim=1)
 
 
-                hidden_states = self.encoder.layer[i](hidden_states)[0]
+                hidden_states = self.encoder.layers[i](hidden_states)[0]
 
         return hidden_states
     
