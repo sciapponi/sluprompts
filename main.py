@@ -17,14 +17,14 @@ def data_processing(data, processor, wav2vec=False):
 
     for i in range(len(data)):
         waveform, sample_rate = soundfile.read(data[i][0])
-        spec = processor(waveform, sampling_rate=sample_rate, return_tensors='pt')
+        if wav2vec:
+            spec = processor(waveform, sampling_rate=sample_rate, padding="max_length", max_length=64000, truncation=True, return_tensors='pt')
+        else:
+            spec = processor(waveform, sampling_rate=sample_rate, return_tensors='pt')
         x.append(spec['input_values'])
         # intent
         intent = data[i][1]
         y.append(torch.tensor(intent))
-
-    if wav2vec:
-        return x, torch.tensor(y)
     
     return torch.cat(x), torch.tensor(y)
 
@@ -142,6 +142,7 @@ def main(args):
     torch.set_num_threads(20)
     # AST Processor which computes spectrograms
     MAX_LENGTH= args.MAX_LENGTH
+    max_len_audio = 64000
     processor = AutoFeatureExtractor.from_pretrained(model_ckpt, max_length=MAX_LENGTH)
     prompt_config = args.PROMPT
     EPOCHS = args.EPOCHS
