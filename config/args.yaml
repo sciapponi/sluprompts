@@ -22,6 +22,7 @@ MAX_LENGTH: 1024
 GRADIENT_ACC: False
 USE_SCHEDULER: False
 
+WAV2VEC: False
 # Wandb Config
 USE_WANDB: True
 PROJECT_NAME: "AST Prompt Tuning New"

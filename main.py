@@ -2,6 +2,7 @@ import hydra
 import torch
 from torch.optim import AdamW
 from models.prompt_ast import PromptAST
+from models.prompt_w2v import PromptW2V
 from fluentspeech import FluentSpeech
 from transformers import AutoFeatureExtractor
 from torch.utils.data import DataLoader
@@ -130,6 +131,9 @@ def main(args):
     # VARIABLE DEFINITION
     data_path = args.DATA_PATH
     model_ckpt="MIT/ast-finetuned-audioset-10-10-0.4593"
+
+    if args.WAV2VEC:
+        model_ckpt = "facebook/wav2vec2-base-960h"
     device = torch.device(args.DEVICE)
     torch.cuda.set_device(0)
     torch.set_num_threads(20)
@@ -153,12 +157,20 @@ def main(args):
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
 
     # MODEL DEFINITION
-    model = PromptAST(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
+    if args.WAV2VEC:
+        model = PromptW2V(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
+        # REQUIRES_GRAD_ = FALSE
+        model.encoder.requires_grad_(False)
+        model.feature_extractor.requires_grad_(False)
+        model.feature_projection.requires_grad_(False)
+    else:
+        model = PromptAST(prompt_config=prompt_config, max_length=MAX_LENGTH, model_ckpt=model_ckpt, num_classes=31).to(device)
+        # REQUIRES_GRAD_ = FALSE
+        model.encoder.requires_grad_(False)
+        model.embeddings.requires_grad_(False)
     print(model)
 
-    # REQUIRES_GRAD_ = FALSE
-    model.encoder.requires_grad_(False)
-    model.embeddings.requires_grad_(False)
+    
     
     # PRINT MODEL PARAMETERS
     n_parameters = sum(p.numel() for p in model.parameters())
