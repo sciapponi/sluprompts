@@ -11,7 +11,7 @@ import wandb
 from tqdm import tqdm
 
 # CREATES SPECTROGRAMS
-def data_processing(data, processor):
+def data_processing(data, processor, wav2vec=False):
     y = [] 
     x = []
 
@@ -23,6 +23,9 @@ def data_processing(data, processor):
         intent = data[i][1]
         y.append(torch.tensor(intent))
 
+    if wav2vec:
+        return x, torch.tensor(y)
+    
     return torch.cat(x), torch.tensor(y)
 
 # EPOCH TRAINING GRADIENT ACCUMULATOR
@@ -152,9 +155,9 @@ def main(args):
     val_data = FluentSpeech(data_path,train="valid", max_len_audio=64000)
 
     # DATA LOADERS
-    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
-    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
-    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor), pin_memory=True, num_workers=NUM_WORKERS)
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor, wav2vec=args.WAV2VEC), pin_memory=True, num_workers=NUM_WORKERS)
+    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor, wav2vec=args.WAV2VEC), pin_memory=True, num_workers=NUM_WORKERS)
+    val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=lambda x: data_processing(x, processor = processor, wav2vec=args.WAV2VEC), pin_memory=True, num_workers=NUM_WORKERS)
 
     # MODEL DEFINITION
     if args.WAV2VEC:
