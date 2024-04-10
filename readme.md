@@ -1,4 +1,4 @@
-This work is part of my Master Thesis.
+This work is part of my [Master Thesis](https://amslaurea.unibo.it/30018/).
 
 It focuses on testing two different learnable prompting techniques (Deep and Shallow prompt tuning) on two different Speech Foundation models, Audio Spectrogram Transformers (AST) and Wav2Vec.
 
